@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import ReactDOM from "react-dom/client";
 import {
   LineChart,
@@ -10,7 +10,7 @@ import {
 } from "recharts";
 
 function App() {
-  const [lang, setLang] = useState("en");
+  const [lang, setLang] = useState("he");
   const [mode, setMode] = useState("normal");
 
   const [amount, setAmount] = useState(10000);
@@ -27,9 +27,9 @@ function App() {
 
   const t = {
     en: {
-      title: "Investment App",
-      initial: "Initial",
-      monthly: "Monthly",
+      title: "Investment Calculator",
+      initial: "Initial Amount",
+      monthly: "Monthly Deposit",
       years: "Years",
       rate: "Return %",
       target: "Target",
@@ -40,7 +40,7 @@ function App() {
       needed: "Needed Monthly"
     },
     he: {
-      title: "אפליקציית השקעות",
+      title: "מחשבון השקעות",
       initial: "סכום התחלתי",
       monthly: "הפקדה חודשית",
       years: "שנים",
@@ -55,6 +55,18 @@ function App() {
   };
 
   const txt = t[lang];
+
+  // 💰 פורמט כסף
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat(
+      lang === "he" ? "he-IL" : "en-US",
+      {
+        style: "currency",
+        currency: lang === "he" ? "ILS" : "USD",
+        maximumFractionDigits: 0
+      }
+    ).format(value);
+  };
 
   const calculate = () => {
     let tempTotal = amount;
@@ -76,7 +88,6 @@ function App() {
     setInvested(tempInvested);
     setProfit(tempTotal - tempInvested);
 
-    // יעד
     if (mode === "target") {
       let guess = 100;
       while (guess < 100000) {
@@ -94,7 +105,6 @@ function App() {
     }
   };
 
-  // שיתוף
   const share = () => {
     const url = `${window.location.origin}?amount=${amount}&monthly=${monthly}&years=${years}&rate=${rate}&target=${target}`;
     navigator.clipboard.writeText(url);
@@ -105,8 +115,8 @@ function App() {
     <div style={{ ...styles.page, direction: lang === "he" ? "rtl" : "ltr" }}>
       
       <div style={styles.topBar}>
-        <button onClick={() => setLang("en")}>EN</button>
         <button onClick={() => setLang("he")}>עברית</button>
+        <button onClick={() => setLang("en")}>EN</button>
       </div>
 
       <h1 style={styles.title}>💰 {txt.title}</h1>
@@ -134,13 +144,13 @@ function App() {
 
           {mode === "normal" ? (
             <div style={styles.results}>
-              <p>{txt.invested}: ${Math.round(invested)}</p>
-              <p>{txt.profit}: ${Math.round(profit)}</p>
-              <h2>${Math.round(total)}</h2>
+              <p>{txt.invested}: {formatCurrency(invested)}</p>
+              <p>{txt.profit}: {formatCurrency(profit)}</p>
+              <h2>{formatCurrency(total)}</h2>
             </div>
           ) : (
             <div style={styles.results}>
-              <h2>{txt.needed}: ${neededMonthly}</h2>
+              <h2>{txt.needed}: {formatCurrency(neededMonthly)}</h2>
             </div>
           )}
 
