@@ -6,16 +6,12 @@ export default function App() {
   const [years, setYears] = useState(10);
 
   const [monthlyPayment, setMonthlyPayment] = useState(0);
-  const [totalPayment, setTotalPayment] = useState(0);
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [sent, setSent] = useState(false);
 
   const WEBHOOK_URL = "https://hook.eu1.make.com/u8vaclr33g6j7uyyvcg17khqhtdlb6fc";
-
-  const formatNumber = (num) =>
-    num.toLocaleString("he-IL");
 
   const formatCurrency = (num) =>
     num.toLocaleString("he-IL", {
@@ -33,7 +29,13 @@ export default function App() {
       (Math.pow(1 + r, n) - 1);
 
     setMonthlyPayment(m);
-    setTotalPayment(m * n);
+  };
+
+  // 🎯 קובעים לאיזה קונה לשלוח
+  const getBuyerPhone = () => {
+    if (loan < 300000) return "0500000000"; // קונה 1
+    if (loan < 1000000) return "0520000000"; // קונה 2
+    return "0540000000"; // קונה גדול 💰
   };
 
   const sendLead = async () => {
@@ -42,8 +44,17 @@ export default function App() {
       return;
     }
 
+    const buyerPhone = getBuyerPhone();
+
+    const leadText = `🔥 ליד חדש!
+שם: ${name}
+טלפון: ${phone}
+סכום: ${loan}
+החזר: ${formatCurrency(monthlyPayment)}`;
+
     try {
-      const res = await fetch(WEBHOOK_URL, {
+      // שליחה ל-Make (שמירה + אוטומציות)
+      await fetch(WEBHOOK_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -58,42 +69,29 @@ export default function App() {
         }),
       });
 
-      if (res.ok) {
-        setSent(true);
-        alert("הפרטים נשלחו בהצלחה 🎉");
-      } else {
-        alert("שגיאה בשליחה ❌");
-      }
+      setSent(true);
+
+      // 💰 שליחה ישירה לקונה (וואטסאפ)
+      window.open(
+        `https://wa.me/972${buyerPhone.replace(
+          /^0/,
+          ""
+        )}?text=${encodeURIComponent(leadText)}`
+      );
+
     } catch (err) {
       alert("שגיאה בשליחה ❌");
     }
   };
 
-  const share = () => {
-    const text = `תראה כמה יוצא לך החזר חודשי:\n${formatCurrency(
-      monthlyPayment
-    )}`;
-
-    if (navigator.share) {
-      navigator.share({
-        title: "מחשבון הלוואה",
-        text,
-        url: window.location.href,
-      });
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert("הקישור הועתק!");
-    }
-  };
-
   return (
     <div style={styles.container}>
-      <h1 style={styles.title}>מחשבון הלוואה</h1>
+      <h1>מחשבון הלוואה 💰</h1>
 
       <div style={styles.card}>
         <label>סכום הלוואה</label>
         <input
-          value={formatNumber(loan)}
+          value={loan.toLocaleString()}
           onChange={(e) =>
             setLoan(Number(e.target.value.replace(/,/g, "")))
           }
@@ -101,14 +99,12 @@ export default function App() {
 
         <label>ריבית (%)</label>
         <input
-          type="number"
           value={rate}
           onChange={(e) => setRate(Number(e.target.value))}
         />
 
         <label>שנים</label>
         <input
-          type="number"
           value={years}
           onChange={(e) => setYears(Number(e.target.value))}
         />
@@ -118,37 +114,28 @@ export default function App() {
         </button>
 
         {monthlyPayment > 0 && (
-          <>
-            <h2>{formatCurrency(monthlyPayment)}</h2>
-            <p>החזר חודשי</p>
-
-            <button style={styles.share} onClick={share}>
-              שתף
-            </button>
-          </>
+          <h2>{formatCurrency(monthlyPayment)}</h2>
         )}
       </div>
 
       <div style={styles.card}>
-        <h3>רוצה הצעה טובה יותר?</h3>
+        <h3>קבל הצעה טובה יותר 🔥</h3>
 
         <input
           placeholder="שם"
-          value={name}
           onChange={(e) => setName(e.target.value)}
         />
 
         <input
           placeholder="טלפון"
-          value={phone}
           onChange={(e) => setPhone(e.target.value)}
         />
 
         <button style={styles.leadBtn} onClick={sendLead}>
-          קבל הצעה משתלמת
+          קבל הצעה עכשיו
         </button>
 
-        {sent && <p>נחזור אליך בקרוב 😉</p>}
+        {sent && <p>נשלח! חוזרים אליך 🚀</p>}
       </div>
     </div>
   );
@@ -161,15 +148,12 @@ const styles = {
     margin: "auto",
     padding: "20px",
   },
-  title: {
-    textAlign: "center",
-  },
   card: {
     background: "#fff",
     padding: "20px",
     marginBottom: "20px",
-    borderRadius: "10px",
-    boxShadow: "0 5px 20px rgba(0,0,0,0.1)",
+    borderRadius: "12px",
+    boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
     display: "flex",
     flexDirection: "column",
     gap: "10px",
@@ -179,20 +163,14 @@ const styles = {
     color: "white",
     padding: "10px",
     border: "none",
-    borderRadius: "6px",
-  },
-  share: {
-    background: "#2196F3",
-    color: "white",
-    padding: "10px",
-    border: "none",
-    borderRadius: "6px",
+    borderRadius: "8px",
   },
   leadBtn: {
-    background: "#ff9800",
+    background: "#ff5722",
     color: "white",
-    padding: "10px",
+    padding: "12px",
     border: "none",
-    borderRadius: "6px",
+    borderRadius: "8px",
+    fontWeight: "bold",
   },
 };
