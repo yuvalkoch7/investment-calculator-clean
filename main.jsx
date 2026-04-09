@@ -11,54 +11,53 @@ import {
 
 function App() {
   const [lang, setLang] = useState("he");
-  const [mode, setMode] = useState("normal");
 
-  const [amount, setAmount] = useState(10000);
-  const [monthly, setMonthly] = useState(1000);
-  const [years, setYears] = useState(5);
-  const [rate, setRate] = useState(7);
-  const [target, setTarget] = useState(1000000);
+  const [loan, setLoan] = useState(200000);
+  const [rate, setRate] = useState(5);
+  const [years, setYears] = useState(10);
 
+  const [monthlyPayment, setMonthlyPayment] = useState(0);
+  const [totalPayment, setTotalPayment] = useState(0);
+  const [interestPaid, setInterestPaid] = useState(0);
   const [data, setData] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [profit, setProfit] = useState(0);
-  const [invested, setInvested] = useState(0);
-  const [neededMonthly, setNeededMonthly] = useState(0);
+
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [saved, setSaved] = useState(false);
 
   const t = {
-    en: {
-      title: "Investment Calculator",
-      initial: "Initial Amount",
-      monthly: "Monthly Deposit",
-      years: "Years",
-      rate: "Return %",
-      target: "Target",
-      apply: "Apply",
-      share: "Share",
-      invested: "Invested",
-      profit: "Profit",
-      needed: "Needed Monthly"
-    },
     he: {
-      title: "מחשבון השקעות",
-      initial: "סכום התחלתי",
-      monthly: "הפקדה חודשית",
-      years: "שנים",
+      title: "מחשבון הלוואה חכם",
+      loan: "סכום הלוואה",
       rate: "ריבית %",
-      target: "יעד",
+      years: "שנים",
       apply: "החל",
+      monthly: "תשלום חודשי",
+      total: "סה״כ תשלום",
+      interest: "ריבית כוללת",
       share: "שתף",
-      invested: "השקעה",
-      profit: "רווח",
-      needed: "נדרש חודשי"
+      lead: "רוצה הצעה טובה יותר?",
+      send: "שלח"
+    },
+    en: {
+      title: "Smart Loan Calculator",
+      loan: "Loan Amount",
+      rate: "Interest %",
+      years: "Years",
+      apply: "Apply",
+      monthly: "Monthly Payment",
+      total: "Total Payment",
+      interest: "Total Interest",
+      share: "Share",
+      lead: "Get better loan offer",
+      send: "Send"
     }
   };
 
   const txt = t[lang];
 
-  // 💰 פורמט כסף
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat(
+  const formatCurrency = (value) =>
+    new Intl.NumberFormat(
       lang === "he" ? "he-IL" : "en-US",
       {
         style: "currency",
@@ -66,97 +65,109 @@ function App() {
         maximumFractionDigits: 0
       }
     ).format(value);
-  };
 
   const calculate = () => {
-    let tempTotal = amount;
-    let tempInvested = amount;
-    let tempData = [];
+    const r = rate / 100 / 12;
+    const n = years * 12;
 
-    for (let i = 1; i <= years * 12; i++) {
-      tempTotal += monthly;
-      tempTotal *= 1 + rate / 100 / 12;
-      tempInvested += monthly;
+    const m =
+      loan * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+
+    const total = m * n;
+
+    setMonthlyPayment(m);
+    setTotalPayment(total);
+    setInterestPaid(total - loan);
+
+    let balance = loan;
+    let temp = [];
+
+    for (let i = 1; i <= n; i++) {
+      const interest = balance * r;
+      const principal = m - interest;
+      balance -= principal;
 
       if (i % 12 === 0) {
-        tempData.push({ year: i / 12, value: Math.round(tempTotal) });
+        temp.push({
+          year: i / 12,
+          value: Math.round(balance)
+        });
       }
     }
 
-    setData(tempData);
-    setTotal(tempTotal);
-    setInvested(tempInvested);
-    setProfit(tempTotal - tempInvested);
+    setData(temp);
+  };
 
-    if (mode === "target") {
-      let guess = 100;
-      while (guess < 100000) {
-        let temp = amount;
-        for (let i = 1; i <= years * 12; i++) {
-          temp += guess;
-          temp *= 1 + rate / 100 / 12;
-        }
-        if (temp >= target) {
-          setNeededMonthly(guess);
-          break;
-        }
-        guess += 50;
-      }
+  const share = async () => {
+    const url = window.location.href;
+
+    if (navigator.share) {
+      await navigator.share({ url });
+    } else {
+      await navigator.clipboard.writeText(url);
+      alert("Link copied!");
     }
   };
 
-  const share = () => {
-    const url = `${window.location.origin}?amount=${amount}&monthly=${monthly}&years=${years}&rate=${rate}&target=${target}`;
-    navigator.clipboard.writeText(url);
-    alert("Link copied!");
+  const saveLead = () => {
+    if (!name || !phone) return alert("מלא פרטים");
+
+    const leads = JSON.parse(localStorage.getItem("leads") || "[]");
+
+    leads.push({ name, phone });
+
+    localStorage.setItem("leads", JSON.stringify(leads));
+    setSaved(true);
   };
 
   return (
     <div style={{ ...styles.page, direction: lang === "he" ? "rtl" : "ltr" }}>
       
-      <div style={styles.topBar}>
+      <div style={styles.top}>
         <button onClick={() => setLang("he")}>עברית</button>
         <button onClick={() => setLang("en")}>EN</button>
       </div>
 
-      <h1 style={styles.title}>💰 {txt.title}</h1>
-
-      <div style={styles.switch}>
-        <button onClick={() => setMode("normal")}>Calculator</button>
-        <button onClick={() => setMode("target")}>Target</button>
-      </div>
+      <h1 style={styles.title}>{txt.title}</h1>
 
       <div style={styles.grid}>
         <div style={styles.card}>
-
-          {mode === "target" && (
-            <Input label={txt.target} value={target} setValue={setTarget} />
-          )}
-
-          <Input label={txt.initial} value={amount} setValue={setAmount} />
-          <Input label={txt.monthly} value={monthly} setValue={setMonthly} />
-          <Input label={txt.years} value={years} setValue={setYears} />
+          
+          <Input label={txt.loan} value={loan} setValue={setLoan} />
           <Input label={txt.rate} value={rate} setValue={setRate} />
+          <Input label={txt.years} value={years} setValue={setYears} />
 
-          <button onClick={calculate} style={styles.apply}>
+          <button style={styles.apply} onClick={calculate}>
             {txt.apply}
           </button>
 
-          {mode === "normal" ? (
+          {monthlyPayment > 0 && (
             <div style={styles.results}>
-              <p>{txt.invested}: {formatCurrency(invested)}</p>
-              <p>{txt.profit}: {formatCurrency(profit)}</p>
-              <h2>{formatCurrency(total)}</h2>
-            </div>
-          ) : (
-            <div style={styles.results}>
-              <h2>{txt.needed}: {formatCurrency(neededMonthly)}</h2>
+              <p>{txt.monthly}: {formatCurrency(monthlyPayment)}</p>
+              <p>{txt.total}: {formatCurrency(totalPayment)}</p>
+              <p>{txt.interest}: {formatCurrency(interestPaid)}</p>
             </div>
           )}
 
-          <button onClick={share} style={styles.share}>
+          <button style={styles.share} onClick={share}>
             {txt.share}
           </button>
+
+          {monthlyPayment > 0 && (
+            <div style={styles.lead}>
+              <h3>{txt.lead}</h3>
+
+              {!saved ? (
+                <>
+                  <input placeholder="שם" onChange={(e) => setName(e.target.value)} />
+                  <input placeholder="טלפון" onChange={(e) => setPhone(e.target.value)} />
+                  <button onClick={saveLead}>{txt.send}</button>
+                </>
+              ) : (
+                <p>✅ נשלח!</p>
+              )}
+            </div>
+          )}
 
         </div>
 
@@ -166,7 +177,7 @@ function App() {
               <XAxis dataKey="year" stroke="#aaa" />
               <YAxis stroke="#aaa" />
               <Tooltip />
-              <Line type="monotone" dataKey="value" stroke="#22c55e" strokeWidth={3} />
+              <Line dataKey="value" stroke="#22c55e" strokeWidth={3} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -183,7 +194,7 @@ function Input({ label, value, setValue }) {
         type="number"
         value={value}
         onChange={(e) => setValue(+e.target.value)}
-        style={{ width: "100%", padding: 8, marginTop: 5 }}
+        style={{ width: "100%", padding: 8 }}
       />
     </div>
   );
@@ -191,21 +202,27 @@ function Input({ label, value, setValue }) {
 
 const styles = {
   page: {
-    background: "#020617",
+    background: "linear-gradient(135deg,#020617,#0f172a)",
     minHeight: "100vh",
     color: "white",
     padding: 20
   },
   title: { textAlign: "center" },
-  topBar: {
-    display: "flex",
-    justifyContent: "flex-end",
-    gap: 10
-  },
+  top: { display: "flex", justifyContent: "flex-end", gap: 10 },
   grid: { display: "flex", gap: 20, flexWrap: "wrap" },
-  card: { background: "#1e293b", padding: 20, borderRadius: 15, width: 320 },
-  chart: { flex: 1, minWidth: 300, background: "#1e293b", padding: 20, borderRadius: 15 },
-  results: { marginTop: 10 },
+  card: {
+    background: "#1e293b",
+    padding: 20,
+    borderRadius: 15,
+    width: 320
+  },
+  chart: {
+    flex: 1,
+    minWidth: 300,
+    background: "#1e293b",
+    padding: 20,
+    borderRadius: 15
+  },
   apply: {
     marginTop: 10,
     padding: 10,
@@ -223,7 +240,13 @@ const styles = {
     border: "none",
     borderRadius: 10
   },
-  switch: { textAlign: "center", margin: 10 }
+  results: { marginTop: 10 },
+  lead: {
+    marginTop: 15,
+    background: "#0f172a",
+    padding: 10,
+    borderRadius: 10
+  }
 };
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
