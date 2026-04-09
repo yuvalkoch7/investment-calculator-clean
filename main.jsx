@@ -61,12 +61,33 @@ function App() {
 
       <h1 style={styles.title}>💰 האמת על ההלוואה שלך</h1>
 
-      {/* סליידרים */}
       <div style={styles.card}>
 
-        <Slider label="סכום הלוואה" value={loan} setValue={setLoan} min={50000} max={1000000} />
-        <Slider label="ריבית %" value={rate} setValue={setRate} min={1} max={12} step={0.1} />
-        <Slider label="שנים" value={years} setValue={setYears} min={1} max={30} />
+        <SliderInput
+          label="סכום הלוואה"
+          value={loan}
+          setValue={setLoan}
+          min={50000}
+          max={3000000}
+          step={1000}
+        />
+
+        <SliderInput
+          label="ריבית %"
+          value={rate}
+          setValue={setRate}
+          min={1}
+          max={12}
+          step={0.1}
+        />
+
+        <SliderInput
+          label="שנים"
+          value={years}
+          setValue={setYears}
+          min={1}
+          max={30}
+        />
 
         <button style={styles.apply} onClick={calculate}>
           חשב עכשיו
@@ -81,7 +102,6 @@ function App() {
 
       </div>
 
-      {/* פירוט */}
       {monthlyPayment > 0 && (
         <div style={styles.details}>
           <div>סה״כ: {formatCurrency(totalPayment)}</div>
@@ -89,7 +109,6 @@ function App() {
         </div>
       )}
 
-      {/* גרף */}
       <div style={styles.chart}>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data}>
@@ -101,24 +120,26 @@ function App() {
         </ResponsiveContainer>
       </div>
 
-      {/* לידים */}
-      {monthlyPayment > 0 && (
-        <div style={styles.lead}>
-          <h3>🔥 אפשר לחסוך לך כסף בהלוואה</h3>
-          <input placeholder="שם" />
-          <input placeholder="טלפון" />
-          <button style={styles.cta}>קבל הצעה טובה יותר</button>
-        </div>
-      )}
-
     </div>
   );
 }
 
-function Slider({ label, value, setValue, min, max, step = 1 }) {
+/* 🔥 קומפוננטה משודרגת */
+function SliderInput({ label, value, setValue, min, max, step = 1 }) {
   return (
     <div style={{ marginBottom: 20 }}>
-      <label>{label}: {value}</label>
+      <label>{label}</label>
+
+      <input
+        type="text"
+        value={value.toLocaleString()}
+        onChange={(e) => {
+          const raw = e.target.value.replace(/,/g, "");
+          if (!isNaN(raw)) setValue(Number(raw));
+        }}
+        style={styles.input}
+      />
+
       <input
         type="range"
         min={min}
@@ -153,6 +174,13 @@ const styles = {
     margin: "auto",
     boxShadow: "0 20px 40px rgba(0,0,0,0.5)"
   },
+  input: {
+    width: "100%",
+    padding: 10,
+    borderRadius: 10,
+    border: "none",
+    marginBottom: 10
+  },
   apply: {
     width: "100%",
     padding: 12,
@@ -179,22 +207,6 @@ const styles = {
     background: "#1e293b",
     padding: 20,
     borderRadius: 20
-  },
-  lead: {
-    marginTop: 30,
-    background: "#020617",
-    padding: 20,
-    borderRadius: 20,
-    textAlign: "center"
-  },
-  cta: {
-    marginTop: 10,
-    padding: 12,
-    width: "100%",
-    background: "#f59e0b",
-    border: "none",
-    borderRadius: 12,
-    cursor: "pointer"
   }
 };
 
