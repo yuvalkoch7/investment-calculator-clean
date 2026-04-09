@@ -1,213 +1,198 @@
-import React, { useState } from "react";
-import ReactDOM from "react-dom/client";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer
-} from "recharts";
+import { useState } from "react";
 
-function App() {
+export default function App() {
   const [loan, setLoan] = useState(200000);
   const [rate, setRate] = useState(5);
   const [years, setYears] = useState(10);
 
   const [monthlyPayment, setMonthlyPayment] = useState(0);
   const [totalPayment, setTotalPayment] = useState(0);
-  const [interestPaid, setInterestPaid] = useState(0);
-  const [data, setData] = useState([]);
 
-  const formatCurrency = (value) =>
-    new Intl.NumberFormat("he-IL", {
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [sent, setSent] = useState(false);
+
+  const WEBHOOK_URL = "https://hook.eu1.make.com/u8vaclr33g6j7uyyvcg17khqhtdlb6fc";
+
+  const formatNumber = (num) =>
+    num.toLocaleString("he-IL");
+
+  const formatCurrency = (num) =>
+    num.toLocaleString("he-IL", {
       style: "currency",
       currency: "ILS",
-      maximumFractionDigits: 0
-    }).format(value);
+      maximumFractionDigits: 0,
+    });
 
   const calculate = () => {
     const r = rate / 100 / 12;
     const n = years * 12;
 
-    const m = loan * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
-    const total = m * n;
+    const m =
+      (loan * r * Math.pow(1 + r, n)) /
+      (Math.pow(1 + r, n) - 1);
 
     setMonthlyPayment(m);
-    setTotalPayment(total);
-    setInterestPaid(total - loan);
+    setTotalPayment(m * n);
+  };
 
-    let balance = loan;
-    let temp = [];
-
-    for (let i = 1; i <= n; i++) {
-      const interest = balance * r;
-      const principal = m - interest;
-      balance -= principal;
-
-      if (i % 12 === 0) {
-        temp.push({
-          year: i / 12,
-          value: Math.round(balance)
-        });
-      }
+  const sendLead = async () => {
+    if (!name || !phone) {
+      alert("נא למלא שם וטלפון");
+      return;
     }
 
-    setData(temp);
+    try {
+      const res = await fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          phone,
+          loan,
+          rate,
+          years,
+          monthlyPayment,
+        }),
+      });
+
+      if (res.ok) {
+        setSent(true);
+        alert("הפרטים נשלחו בהצלחה 🎉");
+      } else {
+        alert("שגיאה בשליחה ❌");
+      }
+    } catch (err) {
+      alert("שגיאה בשליחה ❌");
+    }
+  };
+
+  const share = () => {
+    const text = `תראה כמה יוצא לך החזר חודשי:\n${formatCurrency(
+      monthlyPayment
+    )}`;
+
+    if (navigator.share) {
+      navigator.share({
+        title: "מחשבון הלוואה",
+        text,
+        url: window.location.href,
+      });
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      alert("הקישור הועתק!");
+    }
   };
 
   return (
-    <div style={styles.page}>
-
-      <h1 style={styles.title}>💰 האמת על ההלוואה שלך</h1>
+    <div style={styles.container}>
+      <h1 style={styles.title}>מחשבון הלוואה</h1>
 
       <div style={styles.card}>
-
-        <SliderInput
-          label="סכום הלוואה"
-          value={loan}
-          setValue={setLoan}
-          min={50000}
-          max={3000000}
-          step={1000}
+        <label>סכום הלוואה</label>
+        <input
+          value={formatNumber(loan)}
+          onChange={(e) =>
+            setLoan(Number(e.target.value.replace(/,/g, "")))
+          }
         />
 
-        <SliderInput
-          label="ריבית %"
+        <label>ריבית (%)</label>
+        <input
+          type="number"
           value={rate}
-          setValue={setRate}
-          min={1}
-          max={12}
-          step={0.1}
+          onChange={(e) => setRate(Number(e.target.value))}
         />
 
-        <SliderInput
-          label="שנים"
+        <label>שנים</label>
+        <input
+          type="number"
           value={years}
-          setValue={setYears}
-          min={1}
-          max={30}
+          onChange={(e) => setYears(Number(e.target.value))}
         />
 
-        <button style={styles.apply} onClick={calculate}>
-          חשב עכשיו
+        <button style={styles.button} onClick={calculate}>
+          החל
         </button>
 
         {monthlyPayment > 0 && (
-          <div style={styles.resultMain}>
+          <>
             <h2>{formatCurrency(monthlyPayment)}</h2>
-            <p>תשלום חודשי</p>
-          </div>
+            <p>החזר חודשי</p>
+
+            <button style={styles.share} onClick={share}>
+              שתף
+            </button>
+          </>
         )}
-
       </div>
 
-      {monthlyPayment > 0 && (
-        <div style={styles.details}>
-          <div>סה״כ: {formatCurrency(totalPayment)}</div>
-          <div>ריבית: {formatCurrency(interestPaid)}</div>
-        </div>
-      )}
+      <div style={styles.card}>
+        <h3>רוצה הצעה טובה יותר?</h3>
 
-      <div style={styles.chart}>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={data}>
-            <XAxis dataKey="year" stroke="#aaa" />
-            <YAxis stroke="#aaa" />
-            <Tooltip />
-            <Line dataKey="value" stroke="#22c55e" strokeWidth={3} />
-          </LineChart>
-        </ResponsiveContainer>
+        <input
+          placeholder="שם"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+
+        <input
+          placeholder="טלפון"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+        />
+
+        <button style={styles.leadBtn} onClick={sendLead}>
+          קבל הצעה משתלמת
+        </button>
+
+        {sent && <p>נחזור אליך בקרוב 😉</p>}
       </div>
-
-    </div>
-  );
-}
-
-/* 🔥 קומפוננטה משודרגת */
-function SliderInput({ label, value, setValue, min, max, step = 1 }) {
-  return (
-    <div style={{ marginBottom: 20 }}>
-      <label>{label}</label>
-
-      <input
-        type="text"
-        value={value.toLocaleString()}
-        onChange={(e) => {
-          const raw = e.target.value.replace(/,/g, "");
-          if (!isNaN(raw)) setValue(Number(raw));
-        }}
-        style={styles.input}
-      />
-
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => setValue(+e.target.value)}
-        style={{ width: "100%" }}
-      />
     </div>
   );
 }
 
 const styles = {
-  page: {
-    background: "linear-gradient(135deg,#020617,#0f172a)",
-    minHeight: "100vh",
-    color: "white",
-    padding: 20,
-    fontFamily: "Arial"
+  container: {
+    fontFamily: "Arial",
+    maxWidth: "400px",
+    margin: "auto",
+    padding: "20px",
   },
   title: {
     textAlign: "center",
-    fontSize: 32,
-    marginBottom: 20
   },
   card: {
-    background: "#1e293b",
-    padding: 20,
-    borderRadius: 20,
-    maxWidth: 500,
-    margin: "auto",
-    boxShadow: "0 20px 40px rgba(0,0,0,0.5)"
-  },
-  input: {
-    width: "100%",
-    padding: 10,
-    borderRadius: 10,
-    border: "none",
-    marginBottom: 10
-  },
-  apply: {
-    width: "100%",
-    padding: 12,
-    borderRadius: 12,
-    border: "none",
-    background: "linear-gradient(90deg,#3b82f6,#06b6d4)",
-    color: "white",
-    fontWeight: "bold",
-    cursor: "pointer"
-  },
-  resultMain: {
-    textAlign: "center",
-    marginTop: 20,
-    fontSize: 26,
-    color: "#22c55e"
-  },
-  details: {
+    background: "#fff",
+    padding: "20px",
+    marginBottom: "20px",
+    borderRadius: "10px",
+    boxShadow: "0 5px 20px rgba(0,0,0,0.1)",
     display: "flex",
-    justifyContent: "space-around",
-    marginTop: 20
+    flexDirection: "column",
+    gap: "10px",
   },
-  chart: {
-    marginTop: 30,
-    background: "#1e293b",
-    padding: 20,
-    borderRadius: 20
-  }
+  button: {
+    background: "#4CAF50",
+    color: "white",
+    padding: "10px",
+    border: "none",
+    borderRadius: "6px",
+  },
+  share: {
+    background: "#2196F3",
+    color: "white",
+    padding: "10px",
+    border: "none",
+    borderRadius: "6px",
+  },
+  leadBtn: {
+    background: "#ff9800",
+    color: "white",
+    padding: "10px",
+    border: "none",
+    borderRadius: "6px",
+  },
 };
-
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
