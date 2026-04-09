@@ -10,8 +10,6 @@ import {
 } from "recharts";
 
 function App() {
-  const [lang, setLang] = useState("he");
-
   const [loan, setLoan] = useState(200000);
   const [rate, setRate] = useState(5);
   const [years, setYears] = useState(10);
@@ -21,58 +19,18 @@ function App() {
   const [interestPaid, setInterestPaid] = useState(0);
   const [data, setData] = useState([]);
 
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [saved, setSaved] = useState(false);
-
-  const t = {
-    he: {
-      title: "מחשבון הלוואה חכם",
-      loan: "סכום הלוואה",
-      rate: "ריבית %",
-      years: "שנים",
-      apply: "החל",
-      monthly: "תשלום חודשי",
-      total: "סה״כ תשלום",
-      interest: "ריבית כוללת",
-      share: "שתף",
-      lead: "רוצה הצעה טובה יותר?",
-      send: "שלח"
-    },
-    en: {
-      title: "Smart Loan Calculator",
-      loan: "Loan Amount",
-      rate: "Interest %",
-      years: "Years",
-      apply: "Apply",
-      monthly: "Monthly Payment",
-      total: "Total Payment",
-      interest: "Total Interest",
-      share: "Share",
-      lead: "Get better loan offer",
-      send: "Send"
-    }
-  };
-
-  const txt = t[lang];
-
   const formatCurrency = (value) =>
-    new Intl.NumberFormat(
-      lang === "he" ? "he-IL" : "en-US",
-      {
-        style: "currency",
-        currency: lang === "he" ? "ILS" : "USD",
-        maximumFractionDigits: 0
-      }
-    ).format(value);
+    new Intl.NumberFormat("he-IL", {
+      style: "currency",
+      currency: "ILS",
+      maximumFractionDigits: 0
+    }).format(value);
 
   const calculate = () => {
     const r = rate / 100 / 12;
     const n = years * 12;
 
-    const m =
-      loan * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
-
+    const m = loan * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
     const total = m * n;
 
     setMonthlyPayment(m);
@@ -98,103 +56,77 @@ function App() {
     setData(temp);
   };
 
-  const share = async () => {
-    const url = window.location.href;
-
-    if (navigator.share) {
-      await navigator.share({ url });
-    } else {
-      await navigator.clipboard.writeText(url);
-      alert("Link copied!");
-    }
-  };
-
-  const saveLead = () => {
-    if (!name || !phone) return alert("מלא פרטים");
-
-    const leads = JSON.parse(localStorage.getItem("leads") || "[]");
-
-    leads.push({ name, phone });
-
-    localStorage.setItem("leads", JSON.stringify(leads));
-    setSaved(true);
-  };
-
   return (
-    <div style={{ ...styles.page, direction: lang === "he" ? "rtl" : "ltr" }}>
-      
-      <div style={styles.top}>
-        <button onClick={() => setLang("he")}>עברית</button>
-        <button onClick={() => setLang("en")}>EN</button>
+    <div style={styles.page}>
+
+      <h1 style={styles.title}>💰 האמת על ההלוואה שלך</h1>
+
+      {/* סליידרים */}
+      <div style={styles.card}>
+
+        <Slider label="סכום הלוואה" value={loan} setValue={setLoan} min={50000} max={1000000} />
+        <Slider label="ריבית %" value={rate} setValue={setRate} min={1} max={12} step={0.1} />
+        <Slider label="שנים" value={years} setValue={setYears} min={1} max={30} />
+
+        <button style={styles.apply} onClick={calculate}>
+          חשב עכשיו
+        </button>
+
+        {monthlyPayment > 0 && (
+          <div style={styles.resultMain}>
+            <h2>{formatCurrency(monthlyPayment)}</h2>
+            <p>תשלום חודשי</p>
+          </div>
+        )}
+
       </div>
 
-      <h1 style={styles.title}>{txt.title}</h1>
-
-      <div style={styles.grid}>
-        <div style={styles.card}>
-          
-          <Input label={txt.loan} value={loan} setValue={setLoan} />
-          <Input label={txt.rate} value={rate} setValue={setRate} />
-          <Input label={txt.years} value={years} setValue={setYears} />
-
-          <button style={styles.apply} onClick={calculate}>
-            {txt.apply}
-          </button>
-
-          {monthlyPayment > 0 && (
-            <div style={styles.results}>
-              <p>{txt.monthly}: {formatCurrency(monthlyPayment)}</p>
-              <p>{txt.total}: {formatCurrency(totalPayment)}</p>
-              <p>{txt.interest}: {formatCurrency(interestPaid)}</p>
-            </div>
-          )}
-
-          <button style={styles.share} onClick={share}>
-            {txt.share}
-          </button>
-
-          {monthlyPayment > 0 && (
-            <div style={styles.lead}>
-              <h3>{txt.lead}</h3>
-
-              {!saved ? (
-                <>
-                  <input placeholder="שם" onChange={(e) => setName(e.target.value)} />
-                  <input placeholder="טלפון" onChange={(e) => setPhone(e.target.value)} />
-                  <button onClick={saveLead}>{txt.send}</button>
-                </>
-              ) : (
-                <p>✅ נשלח!</p>
-              )}
-            </div>
-          )}
-
+      {/* פירוט */}
+      {monthlyPayment > 0 && (
+        <div style={styles.details}>
+          <div>סה״כ: {formatCurrency(totalPayment)}</div>
+          <div>ריבית: {formatCurrency(interestPaid)}</div>
         </div>
+      )}
 
-        <div style={styles.chart}>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={data}>
-              <XAxis dataKey="year" stroke="#aaa" />
-              <YAxis stroke="#aaa" />
-              <Tooltip />
-              <Line dataKey="value" stroke="#22c55e" strokeWidth={3} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+      {/* גרף */}
+      <div style={styles.chart}>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={data}>
+            <XAxis dataKey="year" stroke="#aaa" />
+            <YAxis stroke="#aaa" />
+            <Tooltip />
+            <Line dataKey="value" stroke="#22c55e" strokeWidth={3} />
+          </LineChart>
+        </ResponsiveContainer>
       </div>
+
+      {/* לידים */}
+      {monthlyPayment > 0 && (
+        <div style={styles.lead}>
+          <h3>🔥 אפשר לחסוך לך כסף בהלוואה</h3>
+          <input placeholder="שם" />
+          <input placeholder="טלפון" />
+          <button style={styles.cta}>קבל הצעה טובה יותר</button>
+        </div>
+      )}
+
     </div>
   );
 }
 
-function Input({ label, value, setValue }) {
+function Slider({ label, value, setValue, min, max, step = 1 }) {
   return (
-    <div style={{ marginBottom: 10 }}>
-      <label>{label}</label>
+    <div style={{ marginBottom: 20 }}>
+      <label>{label}: {value}</label>
       <input
-        type="number"
+        type="range"
+        min={min}
+        max={max}
+        step={step}
         value={value}
         onChange={(e) => setValue(+e.target.value)}
-        style={{ width: "100%", padding: 8 }}
+        style={{ width: "100%" }}
       />
     </div>
   );
@@ -205,47 +137,64 @@ const styles = {
     background: "linear-gradient(135deg,#020617,#0f172a)",
     minHeight: "100vh",
     color: "white",
-    padding: 20
+    padding: 20,
+    fontFamily: "Arial"
   },
-  title: { textAlign: "center" },
-  top: { display: "flex", justifyContent: "flex-end", gap: 10 },
-  grid: { display: "flex", gap: 20, flexWrap: "wrap" },
+  title: {
+    textAlign: "center",
+    fontSize: 32,
+    marginBottom: 20
+  },
   card: {
     background: "#1e293b",
     padding: 20,
-    borderRadius: 15,
-    width: 320
-  },
-  chart: {
-    flex: 1,
-    minWidth: 300,
-    background: "#1e293b",
-    padding: 20,
-    borderRadius: 15
+    borderRadius: 20,
+    maxWidth: 500,
+    margin: "auto",
+    boxShadow: "0 20px 40px rgba(0,0,0,0.5)"
   },
   apply: {
-    marginTop: 10,
-    padding: 10,
     width: "100%",
-    background: "#3b82f6",
+    padding: 12,
+    borderRadius: 12,
     border: "none",
-    borderRadius: 10,
-    color: "white"
+    background: "linear-gradient(90deg,#3b82f6,#06b6d4)",
+    color: "white",
+    fontWeight: "bold",
+    cursor: "pointer"
   },
-  share: {
-    marginTop: 10,
-    padding: 10,
-    width: "100%",
-    background: "#22c55e",
-    border: "none",
-    borderRadius: 10
+  resultMain: {
+    textAlign: "center",
+    marginTop: 20,
+    fontSize: 26,
+    color: "#22c55e"
   },
-  results: { marginTop: 10 },
+  details: {
+    display: "flex",
+    justifyContent: "space-around",
+    marginTop: 20
+  },
+  chart: {
+    marginTop: 30,
+    background: "#1e293b",
+    padding: 20,
+    borderRadius: 20
+  },
   lead: {
-    marginTop: 15,
-    background: "#0f172a",
-    padding: 10,
-    borderRadius: 10
+    marginTop: 30,
+    background: "#020617",
+    padding: 20,
+    borderRadius: 20,
+    textAlign: "center"
+  },
+  cta: {
+    marginTop: 10,
+    padding: 12,
+    width: "100%",
+    background: "#f59e0b",
+    border: "none",
+    borderRadius: 12,
+    cursor: "pointer"
   }
 };
 
