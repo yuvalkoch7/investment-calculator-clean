@@ -73,7 +73,7 @@ export default function App() {
 החזר: ${formatCurrency(monthly)}`;
 
     window.open(
-      `https://wa.me/972XXXXXXXXX?text=${encodeURIComponent(text)}`
+      `https://wa.me/972524733344?text=${encodeURIComponent(text)}`
     );
   };
 
