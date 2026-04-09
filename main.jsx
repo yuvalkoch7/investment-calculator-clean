@@ -1,11 +1,11 @@
-import { useState } from "react";
+import React, { useState } from "react";
 
 export default function App() {
   const [loan, setLoan] = useState(200000);
   const [rate, setRate] = useState(5);
   const [years, setYears] = useState(10);
 
-  const [monthlyPayment, setMonthlyPayment] = useState(0);
+  const [monthly, setMonthly] = useState(0);
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -14,28 +14,26 @@ export default function App() {
   const WEBHOOK_URL = "https://hook.eu1.make.com/u8vaclr33g6j7uyyvcg17khqhtdlb6fc";
 
   const formatCurrency = (num) =>
-    num.toLocaleString("he-IL", {
+    new Intl.NumberFormat("he-IL", {
       style: "currency",
       currency: "ILS",
       maximumFractionDigits: 0,
-    });
+    }).format(num);
 
   const calculate = () => {
     const r = rate / 100 / 12;
     const n = years * 12;
 
+    if (r === 0) {
+      setMonthly(loan / n);
+      return;
+    }
+
     const m =
       (loan * r * Math.pow(1 + r, n)) /
       (Math.pow(1 + r, n) - 1);
 
-    setMonthlyPayment(m);
-  };
-
-  // 🎯 קובעים לאיזה קונה לשלוח
-  const getBuyerPhone = () => {
-    if (loan < 300000) return "0500000000"; // קונה 1
-    if (loan < 1000000) return "0520000000"; // קונה 2
-    return "0540000000"; // קונה גדול 💰
+    setMonthly(m);
   };
 
   const sendLead = async () => {
@@ -44,16 +42,7 @@ export default function App() {
       return;
     }
 
-    const buyerPhone = getBuyerPhone();
-
-    const leadText = `🔥 ליד חדש!
-שם: ${name}
-טלפון: ${phone}
-סכום: ${loan}
-החזר: ${formatCurrency(monthlyPayment)}`;
-
     try {
-      // שליחה ל-Make (שמירה + אוטומציות)
       await fetch(WEBHOOK_URL, {
         method: "POST",
         headers: {
@@ -65,28 +54,32 @@ export default function App() {
           loan,
           rate,
           years,
-          monthlyPayment,
+          monthly,
         }),
       });
 
       setSent(true);
-
-      // 💰 שליחה ישירה לקונה (וואטסאפ)
-      window.open(
-        `https://wa.me/972${buyerPhone.replace(
-          /^0/,
-          ""
-        )}?text=${encodeURIComponent(leadText)}`
-      );
-
     } catch (err) {
-      alert("שגיאה בשליחה ❌");
+      alert("שגיאה בשליחה");
     }
   };
 
+  // 📤 שליחה ידנית ליועץ (אתה שולט!)
+  const sendToAdvisor = () => {
+    const text = `🔥 ליד חדש
+שם: ${name}
+טלפון: ${phone}
+סכום: ${loan}
+החזר: ${formatCurrency(monthly)}`;
+
+    window.open(
+      `https://wa.me/972XXXXXXXXX?text=${encodeURIComponent(text)}`
+    );
+  };
+
   return (
-    <div style={styles.container}>
-      <h1>מחשבון הלוואה 💰</h1>
+    <div style={styles.page}>
+      <h1>💰 האמת על ההלוואה שלך</h1>
 
       <div style={styles.card}>
         <label>סכום הלוואה</label>
@@ -97,7 +90,7 @@ export default function App() {
           }
         />
 
-        <label>ריבית (%)</label>
+        <label>ריבית %</label>
         <input
           value={rate}
           onChange={(e) => setRate(Number(e.target.value))}
@@ -109,68 +102,10 @@ export default function App() {
           onChange={(e) => setYears(Number(e.target.value))}
         />
 
-        <button style={styles.button} onClick={calculate}>
+        <button onClick={calculate} style={styles.button}>
           החל
         </button>
 
-        {monthlyPayment > 0 && (
-          <h2>{formatCurrency(monthlyPayment)}</h2>
-        )}
-      </div>
-
-      <div style={styles.card}>
-        <h3>קבל הצעה טובה יותר 🔥</h3>
-
-        <input
-          placeholder="שם"
-          onChange={(e) => setName(e.target.value)}
-        />
-
-        <input
-          placeholder="טלפון"
-          onChange={(e) => setPhone(e.target.value)}
-        />
-
-        <button style={styles.leadBtn} onClick={sendLead}>
-          קבל הצעה עכשיו
-        </button>
-
-        {sent && <p>נשלח! חוזרים אליך 🚀</p>}
-      </div>
-    </div>
-  );
-}
-
-const styles = {
-  container: {
-    fontFamily: "Arial",
-    maxWidth: "400px",
-    margin: "auto",
-    padding: "20px",
-  },
-  card: {
-    background: "#fff",
-    padding: "20px",
-    marginBottom: "20px",
-    borderRadius: "12px",
-    boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
-  },
-  button: {
-    background: "#4CAF50",
-    color: "white",
-    padding: "10px",
-    border: "none",
-    borderRadius: "8px",
-  },
-  leadBtn: {
-    background: "#ff5722",
-    color: "white",
-    padding: "12px",
-    border: "none",
-    borderRadius: "8px",
-    fontWeight: "bold",
-  },
-};
+        {monthly > 0 && (
+          <h2 style={{ marginTop: 20 }}>
+           
